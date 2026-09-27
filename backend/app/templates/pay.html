@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата парковки #{{ session.id }}</title>
+    <style>
+        body {
+            font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+            background: #f2f4f7;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 28px 24px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .plate {
+            display: inline-block;
+            background: #111827;
+            color: #fff;
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            margin: 12px 0 20px;
+        }
+        .row { display: flex; justify-content: space-between; margin: 10px 0; color: #374151; }
+        .amount { font-size: 34px; font-weight: 800; color: #111827; margin: 18px 0; }
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #16a34a;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button:disabled { background: #9ca3af; cursor: default; }
+        .status { margin-top: 16px; font-weight: 600; }
+        .status.ok { color: #16a34a; }
+        .status.err { color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Smart Parking — Оплата</h1>
+        <div class="plate">{{ session.plate_number }}</div>
+
+        <div class="row"><span>Время на парковке</span><span>{{ hours }} ч {{ minutes }} мин {{ seconds }} сек</span></div>
+        <div class="row"><span>Сессия №</span><span>{{ session.id }}</span></div>
+
+        <div class="amount" id="amount">{{ "%.2f"|format(session.amount_due or 0) }} ₽</div>
+
+        {% if already_paid %}
+            <button disabled>Уже оплачено ✓</button>
+            <div class="status ok">Шлагбаум открыт, счастливого пути!</div>
+        {% else %}
+            <button id="payBtn" onclick="pay()">Оплатить</button>
+            <div class="status" id="statusText"></div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function pay() {
+            const btn = document.getElementById('payBtn');
+            const statusText = document.getElementById('statusText');
+            btn.disabled = true;
+            btn.innerText = 'Обработка...';
+            try {
+                const resp = await fetch(`/api/pay/{{ session.id }}`, { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok) {
+                    btn.innerText = 'Оплачено ✓';
+                    statusText.className = 'status ok';
+                    statusText.innerText = 'Оплата прошла успешно. Шлагбаум открыт!';
+                } else {
+                    btn.disabled = false;
+                    btn.innerText = 'Оплатить';
+                    statusText.className = 'status err';
+                    statusText.innerText = data.detail || 'Ошибка оплаты';
+                }
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerText = 'Оплатить';
+                statusText.className = 'status err';
+                statusText.innerText = 'Сетевая ошибка, попробуйте ещё раз';
+            }
+        }
+    </script>
+</body>
+</html>
