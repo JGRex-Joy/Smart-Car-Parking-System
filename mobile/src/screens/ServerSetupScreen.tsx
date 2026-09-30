@@ -67,7 +67,7 @@ export default function ServerSetupScreen({ onSelect }: Props) {
           style={[styles.modeButton, styles.entryButton]}
           onPress={() => handleSelect("entry")}
         >
-          <Text style={styles.modeButtonTitle}>🚗 Экран ВЪЕЗДА</Text>
+          <Text style={styles.modeButtonTitle}>Экран ВЪЕЗДА</Text>
           <Text style={styles.modeButtonSubtitle}>Свободные места + тариф</Text>
         </TouchableOpacity>
 
@@ -75,7 +75,7 @@ export default function ServerSetupScreen({ onSelect }: Props) {
           style={[styles.modeButton, styles.exitButton]}
           onPress={() => handleSelect("exit")}
         >
-          <Text style={styles.modeButtonTitle}>🅿️ Экран ВЫЕЗДА</Text>
+          <Text style={styles.modeButtonTitle}>🅿Экран ВЫЕЗДА</Text>
           <Text style={styles.modeButtonSubtitle}>QR, время, сумма</Text>
         </TouchableOpacity>
       </View>

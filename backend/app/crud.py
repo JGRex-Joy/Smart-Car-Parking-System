@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 from app import models
 
 
+
 def get_active_tariff(db: Session) -> Optional[models.Tariff]:
-    return db.query(models.Tariff).filter(models.Tariff.is_active == True).first() 
+    return db.query(models.Tariff).filter(models.Tariff.is_active == True).first()  # noqa: E712
+
 
 
 def is_employee_plate(db: Session, plate_number: str) -> bool:
@@ -33,6 +35,7 @@ def get_free_slot_by_type(db: Session, slot_type: models.SlotType) -> Optional[m
         models.Slot.slot_type == slot_type,
         models.Slot.status == models.SlotStatus.FREE,
     ).first()
+
 
 
 def create_entry_session(db: Session, plate_number: str) -> models.ParkingSession:
@@ -66,6 +69,12 @@ def get_active_parked_session_by_plate(db: Session, plate_number: str):
 
 def get_session(db: Session, session_id: int) -> Optional[models.ParkingSession]:
     return db.query(models.ParkingSession).filter(models.ParkingSession.id == session_id).first()
+
+
+def get_awaiting_payment_session(db: Session) -> Optional[models.ParkingSession]:
+    return db.query(models.ParkingSession).filter(
+        models.ParkingSession.status == models.SessionStatus.AWAITING_PAYMENT,
+    ).order_by(models.ParkingSession.exit_time.desc()).first()
 
 
 def assign_slot_to_session(db: Session, session: models.ParkingSession, slot: models.Slot):
@@ -116,6 +125,7 @@ def mark_session_paid(db: Session, session: models.ParkingSession) -> models.Par
     db.commit()
     db.refresh(session)
     return session
+
 
 
 def build_entry_display_payload(db: Session) -> dict:

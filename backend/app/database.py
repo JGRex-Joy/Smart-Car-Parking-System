@@ -41,15 +41,15 @@ def init_db():
             tariff = models.Tariff(
                 name="Стандартный (тест: считаем по минутам)",
                 price_per_minute=5.0,   
-                free_minutes=1,          # первую 1 минуту бесплатно
+                free_minutes=1,          
                 is_active=True,
             )
             db.add(tariff)
 
         if db.query(models.Employee).count() == 0:
             employees = [
-                models.Employee(plate_number="001AAA", full_name="Омуркулов А.Б"),
-                models.Employee(plate_number="777BBB", full_name="Кенешбеков У.Н."),
+                models.Employee(plate_number="A001AA", full_name="Иванов И.И."),
+                models.Employee(plate_number="B777BB", full_name="Петров П.П."),
             ]
             db.add_all(employees)
 

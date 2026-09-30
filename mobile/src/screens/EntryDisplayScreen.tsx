@@ -76,7 +76,7 @@ export default function EntryDisplayScreen({ host, onBack }: Props) {
           <>
             <Text style={styles.tariffName}>{tariff.name}</Text>
             <Text style={styles.tariffPrice}>
-              {tariff.price_per_minute.toFixed(2)} ₽ / мин
+              {tariff.price_per_minute.toFixed(2)} сом / мин
             </Text>
             {tariff.free_minutes > 0 && (
               <Text style={styles.tariffFree}>

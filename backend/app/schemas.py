@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from app.models import SlotType, SlotStatus, SessionStatus
 
 
+
 class SimEntryRequest(BaseModel):
     plate_number: str = "C123CC"
 

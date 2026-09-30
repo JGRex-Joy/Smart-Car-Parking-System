@@ -97,7 +97,7 @@ export default function ExitDisplayScreen({ host, onBack }: Props) {
         >
           <Text style={styles.barrierEmoji}>✅</Text>
           <Text style={styles.barrierText}>Оплата принята</Text>
-          <Text style={styles.barrierSubtext}>Шлагбаум открыт, счастливого пути!</Text>
+          <Text style={styles.barrierSubtext}>Шлагбаум открыт, счастливого пути</Text>
         </Animated.View>
       )}
     </View>

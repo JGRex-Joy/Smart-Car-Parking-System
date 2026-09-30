@@ -60,7 +60,7 @@
         <div class="row"><span>Время на парковке</span><span>{{ hours }} ч {{ minutes }} мин {{ seconds }} сек</span></div>
         <div class="row"><span>Сессия №</span><span>{{ session.id }}</span></div>
 
-        <div class="amount" id="amount">{{ "%.2f"|format(session.amount_due or 0) }} ₽</div>
+        <div class="amount" id="amount">{{ "%.2f"|format(session.amount_due or 0) }} сом</div>
 
         {% if already_paid %}
             <button disabled>Уже оплачено ✓</button>

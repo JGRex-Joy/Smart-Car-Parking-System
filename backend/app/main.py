@@ -1,6 +1,3 @@
-"""
-Запуск:  uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-"""
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -10,9 +7,9 @@ from app.routers import simulation, payment, websockets as ws_router
 app = FastAPI(
     title="Smart Parking Management System",
     description=(
-        "Макет парковки. Все датчики/камеры эмулируются через REST "
+        "Макет умной парковки. Все датчики/камеры эмулируются"
     ),
-    version="0.1",
+    version="0.2",
 )
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
