@@ -26,7 +26,7 @@ def _warp(img: np.ndarray, box: np.ndarray) -> np.ndarray:
     tl, tr, br, bl = _order_points(box)
     width = int(max(np.linalg.norm(br - bl), np.linalg.norm(tr - tl)))
     height = int(max(np.linalg.norm(tr - br), np.linalg.norm(tl - bl)))
-    if height > width:  # повёрнутый на 90°
+    if height > width:  
         width, height = height, width
     dst = np.array([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]], dtype="float32")
     m = cv2.getPerspectiveTransform(np.array([tl, tr, br, bl], dtype="float32"), dst)

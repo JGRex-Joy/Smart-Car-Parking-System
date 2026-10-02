@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-VALID_REGION_CODES = {f"{i:02d}" for i in range(1, 12)}  # 01..11
+VALID_REGION_CODES = {f"{i:02d}" for i in range(1, 12)}  
 
 LETTER_TO_DIGIT = {
     "O": "0", "Q": "0", "D": "0",

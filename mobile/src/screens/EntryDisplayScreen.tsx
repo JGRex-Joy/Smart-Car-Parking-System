@@ -80,7 +80,7 @@ export default function EntryDisplayScreen({ host, onBack }: Props) {
             </Text>
             {tariff.free_minutes > 0 && (
               <Text style={styles.tariffFree}>
-                Первые {tariff.free_minutes} мин — бесплатно
+                Первые {tariff.free_minutes} мин - бесплатно
               </Text>
             )}
           </>

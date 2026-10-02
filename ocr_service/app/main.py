@@ -6,13 +6,14 @@ from pydantic import BaseModel
 
 from app.backend_client import forward_plate_to_backend
 from app.config import MAX_CORRECTIONS_TO_TRUST
+from app.mock_camera import capture_frame_bytes
 from app.ocr_engine import run_ocr
 from app.plate_utils import extract_plate, PlateCandidate
 
 app = FastAPI(
     title="Smart Parking - OCR Service",
-    description="Распознавание кыргызских автомобильных номеров",
-    version="0.2",
+    description="Распознавание автомобильных номеров",
+    version="0.2.1",
 )
 
 
@@ -22,19 +23,19 @@ class DetectionOut(BaseModel):
 
 
 class RecognizeResponse(BaseModel):
-    plate_number: Optional[str]     
-    formatted: Optional[str]        
+    plate_number: Optional[str]      
+    formatted: Optional[str]         
     region_code: Optional[str]
     is_valid_region: bool
-    corrections_applied: int        
-    confidence: float               
-    plate_detection_method: str     
+    corrections_applied: int         
+    confidence: float                
+    plate_detection_method: str      
     plate_detection_score: float
     raw_detections: List[DetectionOut]
 
 
 def _best_candidate(detections) -> tuple[Optional[PlateCandidate], float]:
-    attempts = []  # (PlateCandidate, confidence)
+    attempts = []  
 
     if detections:
         joined = "".join(d.text for d in detections)
@@ -100,45 +101,78 @@ class GateEventResponse(BaseModel):
     forwarded_to_backend: bool
     backend_response: Optional[dict] = None
     reject_reason: Optional[str] = None
+    frame_source: str   
 
 
-@app.post("/gate-event", response_model=GateEventResponse,
-          summary="Событие с датчика (Arduino) + снимок камеры: распознать и сразу отправить в backend")
-async def gate_event(
-    gate: Literal["entry", "exit"] = Query(..., description="Какой шлагбаум сработал"),
-    file: UploadFile = File(..., description="JPEG/PNG снимок с камеры этого шлагбаума"),
-):
-    """
-    Имитирует полный реальный поток: датчик Arduino сработал -> камера сняла кадр ->
-    этот эндпоинт распознаёт номер и, если уверен в результате, сам вызывает
-    соответствующий эндпоинт backend'а (/api/sim/entry или /api/sim/exit) -
-    без участия человека
-    """
-    image_bytes = await _read_image(file)
+async def _process_gate_event(gate: str, image_bytes: bytes, frame_source: str) -> GateEventResponse:
     recognized = await _recognize_response(image_bytes)
 
     if not recognized.plate_number:
         return GateEventResponse(recognized=recognized, forwarded_to_backend=False,
-                                  reject_reason="Номер не распознан")
+                                  reject_reason="Номер не распознан", frame_source=frame_source)
     if not recognized.is_valid_region:
         return GateEventResponse(recognized=recognized, forwarded_to_backend=False,
-                                  reject_reason=f"Код региона '{recognized.region_code}' вне диапазона 01-11")
+                                  reject_reason=f"Код региона '{recognized.region_code}' вне диапазона 01-11",
+                                  frame_source=frame_source)
     if recognized.corrections_applied > MAX_CORRECTIONS_TO_TRUST:
         return GateEventResponse(recognized=recognized, forwarded_to_backend=False,
                                   reject_reason=f"Слишком много исправленных символов "
-                                                f"({recognized.corrections_applied}) - результату не доверяем")
+                                                f"({recognized.corrections_applied}) - результату не доверяем",
+                                  frame_source=frame_source)
 
     try:
         backend_response = await forward_plate_to_backend(gate, recognized.formatted)
     except httpx.HTTPStatusError as e:
+        # Бизнес-ошибка backend'а (нет мест, нет припаркованной сессии и т.п.) -
+        # не роняем сервис, а прозрачно отдаём причину наружу
         return GateEventResponse(
             recognized=recognized, forwarded_to_backend=False,
             reject_reason=f"Backend отклонил: {e.response.status_code} {e.response.text}",
+            frame_source=frame_source,
         )
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Backend недоступен: {e}")
 
-    return GateEventResponse(recognized=recognized, forwarded_to_backend=True, backend_response=backend_response)
+    return GateEventResponse(recognized=recognized, forwarded_to_backend=True,
+                              backend_response=backend_response, frame_source=frame_source)
+
+
+@app.post("/gate-event/signal", response_model=GateEventResponse,
+          summary="ЧИСТЫЙ сигнал с датчика (Arduino) — без файла, камера снимает сама")
+async def gate_event_signal(gate: Literal["entry", "exit"] = Query(..., description="Какой шлагбаум сработал")):
+    try:
+        image_bytes, source = capture_frame_bytes(gate)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"Камера недоступна: {e}")
+    return await _process_gate_event(gate, image_bytes, frame_source=source)
+
+
+@app.post("/gate-event/with-photo", response_model=GateEventResponse,
+          summary="То же самое, но кадр уже снят и прислан файлом")
+async def gate_event_with_photo(
+    gate: Literal["entry", "exit"] = Query(..., description="Какой шлагбаум сработал"),
+    file: UploadFile = File(..., description="JPEG/PNG кадр, уже снятый внешней камерой-системой"),
+):
+    image_bytes = await _read_image(file)
+    return await _process_gate_event(gate, image_bytes, frame_source="uploaded")
+
+
+class CameraSnapshotResponse(BaseModel):
+    source: str              
+    image_base64: str       
+
+
+@app.get("/debug/camera-snapshot", response_model=CameraSnapshotResponse,
+          summary="DEBUG: посмотреть, что именно видит камера (без распознавания, без сохранения на диск)")
+async def camera_snapshot(gate: Literal["entry", "exit"] = Query(...)):
+    import base64
+    try:
+        image_bytes, source = capture_frame_bytes(gate)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"Камера недоступна: {e}")
+
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    return CameraSnapshotResponse(source=source, image_base64=f"data:image/jpeg;base64,{b64}")
 
 
 @app.get("/health", summary="Проверка, что сервис жив")
